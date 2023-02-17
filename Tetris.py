@@ -30,9 +30,11 @@ block_size = 30  # size of block
 top_left_x = (s_width - play_width) // 2
 top_left_y = s_height - play_height - 50
 
-filepath = '/Users/rajat/PycharmProjects/Tetris/highscore.txt'
-fontpath = '/Users/rajat/PycharmProjects/Tetris/arcade.ttf'
-fontpath_mario = '/Users/rajat/PycharmProjects/Tetris/mario.ttf'
+filepath = 'highscore.txt'
+fontpath = 'arcade.ttf'
+fontpath_mario = 'mario.ttf'
+#Sets a time for the game to end automatically
+MAX_TIME = 120
 
 # shapes formats
 
@@ -227,9 +229,12 @@ def get_shape():
 
 # draws text in the middle
 def draw_text_middle(text, size, color, surface):
+#NW Added initialise to solve crash error when losing game
+    pygame.font.init()  # initialise font
     font = pygame.font.Font(fontpath, size, bold=False, italic=True)
     label = font.render(text, 1, color)
 
+#Error with this line still needs solving
     surface.blit(label, (top_left_x + play_width/2 - (label.get_width()/2), top_left_y + play_height/2 - (label.get_height()/2)))
 
 
@@ -319,6 +324,15 @@ def draw_window(surface, grid, score=0, last_score=0):
     start_y = top_left_y + (play_height / 2 - 100)
 
     surface.blit(label, (start_x, start_y + 200))
+
+#NW Added a countdown timer 
+    clock_x = top_left_x - 200
+    clock_y = top_left_y + 200
+
+    time = MAX_TIME - pygame.time.get_ticks()/1000
+    clocklabel = font.render( 'TIME   ' + str(round(time)) + '   s', 2, (255, 255, 255))
+    surface.blit( clocklabel, (clock_x, clock_y) )
+#End of timer
 
     # last score
     label_hi = font.render('HIGHSCORE   ' + str(last_score), 1, (255, 255, 255))
@@ -462,10 +476,15 @@ def main(window):
         draw_next_shape(next_piece, window)
         pygame.display.update()
 
-        if check_lost(locked_positions):
+#NW Added condition if max time reached to also end game
+        if ( check_lost(locked_positions) ) or ( pygame.time.get_ticks()/1000 >= MAX_TIME ):
             run = False
 
-    draw_text_middle('You Lost', 40, (255, 255, 255), window)
+#NW Added condition to show whether time expired or lost
+    if( pygame.time.get_ticks()/1000 >= MAX_TIME):
+        draw_text_middle('Times   Up', 40, (255, 255, 255), window)
+    else:
+        draw_text_middle('You   Lost', 40, (255, 255, 255), window)
     pygame.display.update()
     pygame.time.delay(2000)  # wait for 2 seconds
     pygame.quit()
