@@ -450,6 +450,14 @@ def main(window):
                     current_piece.rotation = current_piece.rotation + 1 % len(current_piece.shape)
                     if not valid_space(current_piece, grid):
                         current_piece.rotation = current_piece.rotation - 1 % len(current_piece.shape)
+                
+        #NW Added "SPACE" for drop condition
+                elif event.key == pygame.K_SPACE:
+                    #Moves piece to last valid position
+                    while( valid_space(current_piece, grid) ):
+                        current_piece.y += 1
+                    #Undoes last loop to put piece back in a valid spot. 
+                    current_piece.y -= 1
 
         piece_pos = convert_shape_format(current_piece)
 
