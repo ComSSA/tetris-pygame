@@ -33,8 +33,12 @@ top_left_y = s_height - play_height - 50
 filepath = 'highscore.txt'
 fontpath = 'arcade.ttf'
 fontpath_mario = 'mario.ttf'
+imagepath = 'ComSSALogo.png'
 #Sets a time for the game to end automatically
 MAX_TIME = 120
+IMAGE_SIZE = (150, 180)
+IMAGE_POSITION = ( 300, 100 )
+TETRIS_TITLE_POS = ( 50, 30 )
 
 # shapes formats
 
@@ -229,13 +233,21 @@ def get_shape():
 
 # draws text in the middle
 def draw_text_middle(text, size, color, surface):
-#NW Added initialise to solve crash error when losing game
-    pygame.font.init()  # initialise font
+#NW added to clear screen between turns
+    surface.fill((0, 0, 0))# fill the surface with black
+    lines = text.splitlines()
+    imp = pygame.image.load("ComSSALogo.png").convert()
+    imp = pygame.transform.scale( imp, IMAGE_SIZE)
     font = pygame.font.Font(fontpath, size, bold=False, italic=True)
+    tetrislabel = font.render( "ComSSA   Tetris    Competition", 1, color)
     label = font.render(text, 1, color)
 
-#Error with this line still needs solving
-    surface.blit(label, (top_left_x + play_width/2 - (label.get_width()/2), top_left_y + play_height/2 - (label.get_height()/2)))
+#NW Added to allow to display multiple lines
+    for i, line in enumerate(lines):
+        surface.blit(font.render(line, 1, color), (top_left_x + play_width/2 - (label.get_width()/2), top_left_y + play_height/2 - (label.get_height()/2) + 50*i))
+
+    surface.blit(imp, IMAGE_POSITION)
+    surface.blit( tetrislabel, TETRIS_TITLE_POS)
 
 
 # draws the lines of the grid for the game
@@ -358,7 +370,7 @@ def draw_window(surface, grid, score=0, last_score=0):
     border_color = (255, 255, 255)
     pygame.draw.rect(surface, border_color, (top_left_x, top_left_y, play_width, play_height), 4)
 
-    # pygame.display.update()
+    #pygame.display.update()
 
 
 # update the score txt file with high score
@@ -490,12 +502,12 @@ def main(window):
 
 #NW Added condition to show whether time expired or lost
     if( pygame.time.get_ticks()/1000 >= MAX_TIME):
-        draw_text_middle('Times   Up', 40, (255, 255, 255), window)
+        draw_text_middle("Times   Up\nYour  Score   " + str(score), 40, (255, 255, 255), window)
     else:
-        draw_text_middle('You   Lost', 40, (255, 255, 255), window)
+        draw_text_middle("You   Lost\nYour  Score   " + str(score), 40, (255, 255, 255), window)
     pygame.display.update()
-    pygame.time.delay(2000)  # wait for 2 seconds
-    pygame.quit()
+    pygame.time.delay(5000)  # wait for 5 seconds
+    #pygame.quit()
 
 
 def main_menu(window):
@@ -509,12 +521,16 @@ def main_menu(window):
                 run = False
             elif event.type == pygame.KEYDOWN:
                 main(window)
+            #Added to set main window after a play
+                draw_text_middle('Press any key to begin', 50, (255, 255, 255), window)
+                pygame.display.update()
 
     pygame.quit()
+    #sys.exit()
 
 
 if __name__ == '__main__':
     win = pygame.display.set_mode((s_width, s_height))
-    pygame.display.set_caption('Tetris')
+    pygame.display.set_caption('ComSSA Tetris')
 
     main_menu(win)  # start game
