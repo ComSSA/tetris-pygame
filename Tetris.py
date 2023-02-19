@@ -33,9 +33,10 @@ top_left_y = s_height - play_height - 50
 filepath = 'highscore.txt'
 fontpath = 'arcade.ttf'
 fontpath_mario = 'mario.ttf'
-imagepath = 'ComSSALogo.png'
+logopath = 'ComSSALogo.png'
 #Sets a time for the game to end automatically
 MAX_TIME = 120
+WAIT_BETWEEN_TURNS = 10
 IMAGE_SIZE = (150, 180)
 IMAGE_POSITION = ( 300, 100 )
 TETRIS_TITLE_POS = ( 50, 30 )
@@ -236,7 +237,7 @@ def draw_text_middle(text, size, color, surface):
 #NW added to clear screen between turns
     surface.fill((0, 0, 0))# fill the surface with black
     lines = text.splitlines()
-    imp = pygame.image.load("ComSSALogo.png").convert()
+    imp = pygame.image.load(logopath).convert()
     imp = pygame.transform.scale( imp, IMAGE_SIZE)
     font = pygame.font.Font(fontpath, size, bold=False, italic=True)
     tetrislabel = font.render( "ComSSA   Tetris    Competition", 1, color)
@@ -345,6 +346,11 @@ def draw_window(surface, grid, score=0, last_score=0):
     clocklabel = font.render( 'TIME   ' + str(round(time)) + '   s', 2, (255, 255, 255))
     surface.blit( clocklabel, (clock_x, clock_y) )
 #End of timer
+
+#NW Added comssa logo during gameplay
+    imp = pygame.image.load(logopath).convert()
+    imp = pygame.transform.scale( imp, (150, 180))
+    surface.blit( imp, (50, 50) )
 
     # last score
     label_hi = font.render('HIGHSCORE   ' + str(last_score), 1, (255, 255, 255))
@@ -506,7 +512,7 @@ def main(window):
     else:
         draw_text_middle("You   Lost\nYour  Score   " + str(score), 40, (255, 255, 255), window)
     pygame.display.update()
-    pygame.time.delay(5000)  # wait for 5 seconds
+    pygame.time.delay( WAIT_BETWEEN_TURNS * 1000)  # wait between turns
     #pygame.quit()
 
 
