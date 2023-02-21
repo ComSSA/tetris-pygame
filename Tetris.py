@@ -1,5 +1,7 @@
 import random
 import pygame
+import pygame_menu
+import time
 
 """
 10 x 20 grid
@@ -35,7 +37,8 @@ fontpath = 'arcade.ttf'
 fontpath_mario = 'mario.ttf'
 logopath = 'ComSSALogo.png'
 #Sets a time for the game to end automatically
-MAX_TIME = 60
+
+MAX_TIME = 10
 WAIT_BETWEEN_TURNS = 10
 IMAGE_SIZE = (150, 180)
 IMAGE_POSITION = ( 300, 100 )
@@ -234,7 +237,7 @@ def get_shape():
 
 # draws text in the middle
 def draw_text_middle(text, size, color, surface):
-#NW added to clear screen between turns
+    #NW added to clear screen between turns
     surface.fill((0, 0, 0))# fill the surface with black
     lines = text.splitlines()
     imp = pygame.image.load(logopath).convert()
@@ -243,7 +246,7 @@ def draw_text_middle(text, size, color, surface):
     tetrislabel = font.render( "ComSSA   Tetris    Competition", 1, color)
     label = font.render(text, 1, color)
 
-#NW Added to allow to display multiple lines
+    #NW Added to allow to display multiple lines
     for i, line in enumerate(lines):
         surface.blit(font.render(line, 1, color), (top_left_x + play_width/2 - (label.get_width()/2), top_left_y + play_height/2 - (label.get_height()/2) + 50*i))
 
@@ -320,7 +323,7 @@ def draw_next_shape(piece, surface):
 
 
 # draws the content of the window
-def draw_window(surface, grid, score=0, last_score=0):
+def draw_window(surface, grid, seconds_remaining, score=0, last_score=0):
     surface.fill((0, 0, 0))  # fill the surface with black
 
     pygame.font.init()  # initialise font
@@ -338,16 +341,15 @@ def draw_window(surface, grid, score=0, last_score=0):
 
     surface.blit(label, (start_x, start_y + 200))
 
-#NW Added a countdown timer 
+    #NW Added a countdown timer 
     clock_x = top_left_x - 200
     clock_y = top_left_y + 200
 
-    time = MAX_TIME - pygame.time.get_ticks()/1000
-    clocklabel = font.render( 'TIME   ' + str(round(time)) + '   s', 2, (255, 255, 255))
+    clocklabel = font.render( 'TIME   ' + str(round(seconds_remaining)) + '   s', 2, (255, 255, 255))
     surface.blit( clocklabel, (clock_x, clock_y) )
-#End of timer
+    #End of timer
 
-#NW Added comssa logo during gameplay
+    #NW Added comssa logo during gameplay
     imp = pygame.image.load(logopath).convert()
     imp = pygame.transform.scale( imp, (150, 180))
     surface.blit( imp, (50, 50) )
@@ -399,7 +401,7 @@ def get_max_score():
     return score
 
 
-def main(window):
+def main(window, start_time):
     locked_positions = {}
     create_grid(locked_positions)
 
@@ -498,26 +500,30 @@ def main(window):
             if last_score < score:
                 last_score = score
 
-        draw_window(window, grid, score, last_score)
+        #SM Use time module instead of pygame.time to work out seconds remaining
+        seconds_remaining = MAX_TIME - (time.time() - start_time)
+
+        draw_window(window, grid, seconds_remaining, score, last_score)
         draw_next_shape(next_piece, window)
         pygame.display.update()
 
-#NW Added condition if max time reached to also end game
-        if ( check_lost(locked_positions) ) or ( pygame.time.get_ticks()/1000 >= MAX_TIME ):
+        #NW Added condition if max time reached to also end game
+        if ( check_lost(locked_positions) ) or ( seconds_remaining <= 0 ):
             run = False
 
-#NW Added condition to show whether time expired or lost
-    if( pygame.time.get_ticks()/1000 >= MAX_TIME):
+        #NW Added condition to show whether time expired or lost
+    if( seconds_remaining <= 0 ):
         draw_text_middle("Times   Up\nYour  Score   " + str(score), 40, (255, 255, 255), window)
     else:
         draw_text_middle("You   Lost\nYour  Score   " + str(score), 40, (255, 255, 255), window)
     pygame.display.update()
-    pygame.time.delay( WAIT_BETWEEN_TURNS * 1000)  # wait between turns
+    # pygame.time.delay( WAIT_BETWEEN_TURNS * 1000)  # wait between turns
     #pygame.quit()
 
 
-def main_menu(window):
+def main_menu(window, playerID):
     run = True
+    start_time = time.time()
     while run:
         draw_text_middle('Press any key to begin', 50, (255, 255, 255), window)
         pygame.display.update()
@@ -526,17 +532,75 @@ def main_menu(window):
             if event.type == pygame.QUIT:
                 run = False
             elif event.type == pygame.KEYDOWN:
-                main(window)
+                main(window, start_time)
             #Added to set main window after a play
-                draw_text_middle('Press any key to begin', 50, (255, 255, 255), window)
                 pygame.display.update()
 
     pygame.quit()
     #sys.exit()
 
+# SM add reset function to restart the game
+def reset():
+    # Initialize pygame
+    pygame.init()
+
+    # SM custom theme
+    comssa_theme = pygame_menu.themes.THEME_DARK.copy()
+    # background color #4459a5
+    comssa_theme.background_color = (68, 89, 165)
+    # no default title
+    comssa_theme.title = False
+
+    # SM added settings menu
+    menu = pygame_menu.Menu(
+        height=s_height,
+        title='Settings',
+        theme=comssa_theme,
+        width=s_width
+    )
+
+    playerID = 0
+
+    # ComSSA logo
+    logo = pygame_menu.baseimage.BaseImage(
+        image_path='ComSSALogo.png',
+        drawing_mode=pygame_menu.baseimage.IMAGE_MODE_FILL
+    )
+    menu.add.image(logo)
+
+    menu.add.label(
+        'ComSSA Tetris',
+        align=pygame_menu.locals.ALIGN_CENTER,
+        font_size=40,
+        # color of white
+        font_color=(255, 255, 255)
+    )
+
+    menu.add.text_input(
+        'Enter your Student/Staff ID: ',
+        default='12345678',
+        textinput_id='player_id'
+    )
+
+    menu.add.button(
+        'Play',
+        # exit menu
+        menu.disable,
+        align=pygame_menu.locals.ALIGN_CENTER
+    )
+
+    menu.mainloop(win)
+
+    # SM get the player ID from the menu
+    playerID = menu.get_input_data()['player_id']
+
+    # SM after this menu, run the actual game
+    print("Player ID: " + str(playerID))
+    main_menu(win, playerID)
 
 if __name__ == '__main__':
     win = pygame.display.set_mode((s_width, s_height))
     pygame.display.set_caption('ComSSA Tetris')
 
-    main_menu(win)  # start game
+    reset()
+    
