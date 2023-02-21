@@ -38,7 +38,7 @@ fontpath_mario = 'mario.ttf'
 logopath = 'ComSSALogo.png'
 #Sets a time for the game to end automatically
 MAX_TIME = 60
-WAIT_BETWEEN_TURNS = 2
+WAIT_BETWEEN_TURNS = 10
 IMAGE_SIZE = (150, 180)
 IMAGE_POSITION = ( 300, 100 )
 TETRIS_TITLE_POS = ( 50, 30 )
