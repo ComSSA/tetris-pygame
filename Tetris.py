@@ -247,10 +247,10 @@ def draw_text_middle(text, size, color, surface):
     imp = pygame.transform.scale( imp, IMAGE_SIZE)
     font = pygame.font.Font(fontpath, size, bold=False, italic=True)
     tetrislabel = font.render( "ComSSA   Tetris    Competition", 1, color)
-    label = font.render(text, 1, color)
 
     #NW Added to allow to display multiple lines
     for i, line in enumerate(lines):
+        label = font.render(line, 1, color)
         surface.blit(font.render(line, 1, color), (top_left_x + play_width/2 - (label.get_width()/2), top_left_y + play_height/2 - (label.get_height()/2) + 50*i))
 
     surface.blit(imp, IMAGE_POSITION)
@@ -310,7 +310,7 @@ def draw_next_shape(piece, surface):
     label = font.render('Next shape', 1, (255, 255, 255))
 
     start_x = top_left_x + play_width + 50
-    start_y = top_left_y + (play_height / 2 - 100)
+    start_y = top_left_y + 200
 
     shape_format = piece.shape[piece.rotation % len(piece.shape)]
 
@@ -327,7 +327,7 @@ def draw_next_shape(piece, surface):
 
 #NW Changed to takes list of top scores
 # draws the content of the window
-def draw_window(surface, grid, seconds_remaining, top_scores, score=0):
+def draw_window(surface, grid, seconds_remaining, top_scores, score=0, lines_cleared=0):
     surface.fill((0, 0, 0))  # fill the surface with black
 
     pygame.font.init()  # initialise font
@@ -339,15 +339,17 @@ def draw_window(surface, grid, seconds_remaining, top_scores, score=0):
     # current score
     font = pygame.font.Font(fontpath, 30)
     label = font.render('SCORE   ' + str(score) , 1, (255, 255, 255))
+    clear_label = font.render('LINES   ' + str(lines_cleared), 1, (255, 255, 255))
 
     start_x = top_left_x + play_width + 50
     start_y = top_left_y + (play_height / 2 - 100)
 
     surface.blit(label, (start_x, start_y + 200))
+    surface.blit(clear_label, (start_x, start_y + 250))
 
     #NW Added a countdown timer 
     clock_x = top_left_x - 200
-    clock_y = top_left_y + 200
+    clock_y = top_left_y + 170 # -30 to be inline with next shape
 
     clocklabel = font.render( 'TIME   ' + str(round(seconds_remaining)) + '   s', 2, (255, 255, 255))
     surface.blit( clocklabel, (clock_x, clock_y) )
@@ -362,18 +364,25 @@ def draw_window(surface, grid, seconds_remaining, top_scores, score=0):
     
 #NW Can change here to include all top three player if needed. 
     last_score = top_scores[0][1]
+    last_lines = top_scores[0][2]
     label_hi = font.render('TOP  SCORE   ' + str(last_score), 1, (255, 255, 255))
+    label_hi2 = font.render('TOP  LINES   ' + str(last_lines), 1, (255, 255, 255))
 #NW Changed extra unnecessary math
     start_x_hi = top_left_x - 220
     start_y_hi = top_left_y + 400
     surface.blit(label_hi, (start_x_hi, start_y_hi))
+    surface.blit(label_hi2, (start_x_hi, start_y_hi + 50))
 
 #NW Added student ID of top player.
     top_id = top_scores[0][0]
-    label_id = font.render('TOP  PLAYER ', 1, (255, 255, 255))
-    y_id = start_y_hi - 100
+    top_id2 = top_scores[1][0]
+    top_id3 = top_scores[2][0]
+    label_id = font.render('TOP  PLAYERS ', 1, (255, 255, 255))
+    y_id = start_y_hi - 150
     surface.blit(label_id, (start_x_hi, y_id))
     surface.blit( font.render(str(top_id), 1, (255,255,255) ), (start_x_hi, y_id+30))
+    surface.blit( font.render(str(top_id2), 1, (255,255,255) ), (start_x_hi, y_id+60))
+    surface.blit( font.render(str(top_id3), 1, (255,255,255) ), (start_x_hi, y_id+90))
 
     # draw content of the grid
     for i in range(row):
@@ -396,10 +405,10 @@ def draw_window(surface, grid, seconds_remaining, top_scores, score=0):
 
 # update the score txt file with high score
 #NW Changed to track top 3 scores in order with student number
-def update_score_file(new_score, playerID ):
+def update_score_file(new_score, lines_cleared, playerID ):
 
     scores = get_max_scores()
-    scores = update_max_scores( new_score, playerID, scores)
+    scores = update_max_scores( new_score, lines_cleared, playerID, scores)
 
     with open( filepath, 'w', newline='') as file:
         csv_writer = csv.writer(file)
@@ -408,15 +417,29 @@ def update_score_file(new_score, playerID ):
 
 
 #Updates the list of 3 scores if new score is higher
-def update_max_scores( new_score, playerID, scores):
+def update_max_scores( new_score, lines_cleared, playerID, scores):
 
     i = 2
     while( ( new_score > int(scores[i][1]) ) and ( i >= 0 ) ) :
         i = i - 1
 
-    scores.insert( (i+1), [playerID, new_score])
-    #Remove lowest score, only save 3
-    scores.pop()
+    # SM check if the playerID is already in the list
+    # if it is, remove it instead of the last score
+    playerAlreadyInList = False
+    for j in range( len(scores) ):
+        if scores[j][0] == playerID:
+            playerAlreadyInList = True
+
+    scores.insert( (i+1), [playerID, new_score, lines_cleared] )
+    
+    if playerAlreadyInList:
+        # remove the second instance of the playerID (work backwards)
+        for j in range( len(scores) - 1, -1, -1 ):
+            if scores[j][0] == playerID:
+                scores.pop(j)
+                break
+    else:
+        scores.pop()
 
     return scores
 
@@ -444,9 +467,11 @@ def main(window, start_time, playerID):
     fall_speed = 0.35
     level_time = 0
     score = 0
+    lines_cleared = 0
     top_scores = get_max_scores()
     #Takes just the top score, can be updated to include all three scores
     last_score = int(top_scores[0][1])
+    last_lines = int(top_scores[0][2])
 
     while run:
         # need to constantly make new grid as locked positions always change
@@ -526,15 +551,27 @@ def main(window, start_time, playerID):
             current_piece = next_piece
             next_piece = get_shape()
             change_piece = False
-            score += clear_rows(grid, locked_positions)    # increment score by 1 for every row cleared
+            cleared_rows = clear_rows(grid, locked_positions)    # increment score by 1 for every row cleared
+            lines_cleared += cleared_rows
+
+            # https://tetris.wiki/Scoring#Original_BPS_scoring_system
+            if cleared_rows == 1:
+                score += 4
+            elif cleared_rows == 2:
+                score += 10
+            elif cleared_rows == 3:
+                score += 30
+            elif cleared_rows == 4:
+                score += 120
+
         #NW removed as was doing a file read every score update, too much potential for errors
             #update_score(score, playerID)
-            top_scores = update_max_scores( score, playerID, top_scores)
+            top_scores = update_max_scores( score, lines_cleared, playerID, top_scores)
 
         #SM Use time module instead of pygame.time to work out seconds remaining
         seconds_remaining = MAX_TIME - (time.time() - start_time)
 
-        draw_window(window, grid, seconds_remaining, top_scores, score)
+        draw_window(window, grid, seconds_remaining, top_scores, score, lines_cleared)
         draw_next_shape(next_piece, window)
         pygame.display.update()
 
@@ -542,8 +579,8 @@ def main(window, start_time, playerID):
         if ( check_lost(locked_positions) ) or ( seconds_remaining <= 0 ):
             print("Game Over with " + str(seconds_remaining) + " seconds remaining")
             run = False
-            update_all_scores( score, playerID )
-            update_score_file( score, playerID )
+            update_all_scores( score, lines_cleared, playerID )
+            update_score_file( score, lines_cleared, playerID )
     
     # SM Added quick results menu
     global comssa_theme
@@ -554,20 +591,16 @@ def main(window, start_time, playerID):
         width=s_width
     )
 
-    logo = pygame_menu.baseimage.BaseImage(
-        image_path='ComSSALogo.png',
-        drawing_mode=pygame_menu.baseimage.IMAGE_MODE_FILL
-    )
-    results_menu.add.image(logo)
-
     results_menu.add.label(
         'ComSSA   Tetris',
         align=pygame_menu.locals.ALIGN_CENTER,
-        font_size=50,
+        font_size=80,
         # color of white
         font_color=(255, 255, 255),
         font_name='arcade.ttf'
     )
+
+    results_menu.add.vertical_margin(50)
 
     #NW Added condition to show whether time expired or lost
     if( seconds_remaining <= 0 ):
@@ -591,7 +624,14 @@ def main(window, start_time, playerID):
         "Your Score " + str(score),
         font_size=60,
         font_name='arcade.ttf',
-        font_color=(255, 255, 255),
+        font_color=(255, 255, 255)
+    )
+
+    results_menu.add.label(
+        "Lines Cleared " + str(lines_cleared),
+        font_size=60,
+        font_name='arcade.ttf',
+        font_color=(255, 255, 255)
     )
 
     # vertical space
@@ -611,22 +651,25 @@ def main(window, start_time, playerID):
     #pygame.quit()
 
 
-def update_all_scores( score, playerID ):
+def update_all_scores( score, lines_cleared, playerID ):
     with open( 'allscores.csv', 'a') as allscoresfile:
-        allscoresfile.write(str(playerID) + "," + str(score) + "\n")
+        allscoresfile.write(str(playerID) + "," + str(score) + "," + str(lines_cleared) + "\n")
     allscoresfile.close()
 
 def main_menu(window, playerID):
     run = True
-    start_time = time.time()
     while run:
-        draw_text_middle('Press any key to begin', 50, (255, 255, 255), window)
+        draw_text_middle(
+            'Press any key to begin\n\nSpace      Drop\nLeft  Arrow     Move  Left\nRight  Arrow     Move  Right\nUp  Arrow      Rotate\nDown  Arrow      Soft  Drop',
+            50, (255, 255, 255), window
+        )
         pygame.display.update()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
             elif event.type == pygame.KEYDOWN:
+                start_time = time.time()
                 main(window, start_time, playerID)
 
     pygame.quit()
