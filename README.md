@@ -25,6 +25,14 @@ If the project is imported in PyCharm, then the file can be run directly by sett
 
 ###### Note: The ```filepath``` and ```fontpath``` for the text files and fonts need to be updated according to the location of the project on the user's machine.
 
+## Changes made for ComSSA edition
+    -ComSSA logo added to main page and run page
+    -Time limit given for fast arcade mode
+    -Reduced file reading process
+    -Added file saving for all scores
+    -Refined alignment calculation
+    -Student ID input
+    -Menu management
 
 ## Screenshots
 
@@ -46,6 +54,10 @@ If the project is imported in PyCharm, then the file can be run directly by sett
 * **Rajat Dipta Biswas** - *Initial work*
 
 See also the list of [contributors](https://github.com/rajatdiptabiswas/tetris-pygame/graphs/contributors) who participated in this project.
+
+Contributors for ComSSA edition
+    -Clusterpuck (Nick Wright)
+    -s3ansh33p (Sean McGinty)
 
 
 ## Acknowledgements
