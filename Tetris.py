@@ -41,8 +41,7 @@ fontpath_mario = 'mario.ttf'
 logopath = 'ComSSALogo.png'
 #Sets a time for the game to end automatically
 
-MAX_TIME = 10
-WAIT_BETWEEN_TURNS = 10
+MAX_TIME = 60
 IMAGE_SIZE = (150, 180)
 IMAGE_POSITION = ( 300, 100 )
 TETRIS_TITLE_POS = ( 50, 30 )
@@ -396,10 +395,10 @@ def draw_window(surface, grid, seconds_remaining, top_scores, score=0):
 
 # update the score txt file with high score
 #NW Changed to track top 3 scores in order with student number
-def update_score_file(new_score, studentNo ):
+def update_score_file(new_score, playerID ):
 
     scores = get_max_scores()
-    scores = update_max_scores( new_score, studentNo, scores)
+    scores = update_max_scores( new_score, playerID, scores)
 
     with open( filepath, 'w', newline='') as file:
         csv_writer = csv.writer(file)
@@ -408,13 +407,13 @@ def update_score_file(new_score, studentNo ):
 
 
 #Updates the list of 3 scores if new score is higher
-def update_max_scores( new_score, studentNo, scores):
+def update_max_scores( new_score, playerID, scores):
 
     i = 2
     while( ( new_score > int(scores[i][1]) ) and ( i >= 0 ) ) :
         i = i - 1
 
-    scores.insert( (i+1), [studentNo, new_score])
+    scores.insert( (i+1), [playerID, new_score])
     #Remove lowest score, only save 3
     scores.pop()
 
@@ -431,7 +430,7 @@ def get_max_scores():
     return scores
 
 
-def main(window, start_time):
+def main(window, start_time, playerID):
     locked_positions = {}
     create_grid(locked_positions)
 
@@ -441,14 +440,13 @@ def main(window, start_time):
     next_piece = get_shape()
     clock = pygame.time.Clock()
     fall_time = 0
-    fall_speed = 0.35
+    # fall_speed = 0.35
+    fall_speed = 0.5
     level_time = 0
     score = 0
     top_scores = get_max_scores()
-#Takes just the top score, can be updated to include all three scores
+    #Takes just the top score, can be updated to include all three scores
     last_score = int(top_scores[0][1])
-#Placeholder for collecting student number
-    studentNo = 12345678
 
     while run:
         # need to constantly make new grid as locked positions always change
@@ -499,20 +497,20 @@ def main(window, start_time):
                     if not valid_space(current_piece, grid):
                         current_piece.y -= 1
 
-                elif event.key == pygame.K_UP:
+                if event.key == pygame.K_UP:
                     # rotate shape
                     current_piece.rotation = current_piece.rotation + 1 % len(current_piece.shape)
                     if not valid_space(current_piece, grid):
                         current_piece.rotation = current_piece.rotation - 1 % len(current_piece.shape)
-                
-        #NW Added "SPACE" for drop condition
+
+                #NW Added "SPACE" for drop condition
                 elif event.key == pygame.K_SPACE:
                     #Moves piece to last valid position
                     while( valid_space(current_piece, grid) ):
                         current_piece.y += 1
                     #Undoes last loop to put piece back in a valid spot. 
                     current_piece.y -= 1
-
+                
         piece_pos = convert_shape_format(current_piece)
 
         # draw the piece on the grid by giving color in the piece locations
@@ -530,8 +528,8 @@ def main(window, start_time):
             change_piece = False
             score += clear_rows(grid, locked_positions) * 10    # increment score by 10 for every row cleared
         #NW removed as was doing a file read every score update, too much potential for errors
-            #update_score(score, studentNo)
-            top_scores = update_max_scores( score, studentNo, top_scores)
+            #update_score(score, playerID)
+            top_scores = update_max_scores( score, playerID, top_scores)
 
         #SM Use time module instead of pygame.time to work out seconds remaining
         seconds_remaining = MAX_TIME - (time.time() - start_time)
@@ -543,22 +541,63 @@ def main(window, start_time):
         #NW Added condition if max time reached to also end game
         if ( check_lost(locked_positions) ) or ( seconds_remaining <= 0 ):
             run = False
-            update_all_scores( score, studentNo )
-            update_score_file(score, studentNo)
+            update_all_scores( score, playerID )
+            update_score_file( score, playerID )
+    
+    # SM Added quick results menu
+    global comssa_theme
+    results_menu = pygame_menu.Menu(
+        height=s_height,
+        title='Settings',
+        theme=comssa_theme,
+        width=s_width
+    )
 
-        #NW Added condition to show whether time expired or lost
+    #NW Added condition to show whether time expired or lost
     if( seconds_remaining <= 0 ):
-        draw_text_middle("Times   Up\nYour  Score   " + str(score), 40, (255, 255, 255), window)
+        # draw_text_middle("Times   Up\nYour  Score   " + str(score), 40, (255, 255, 255), window)
+        results_menu.add.label(
+            "Times Up",
+            font_size=60,
+            font_name='arcade.ttf',
+            font_color=(255, 255, 255)
+        )
     else:
-        draw_text_middle("You   Crashed\nYour  Score   " + str(score), 40, (255, 255, 255), window)
-    pygame.display.update()
-    # pygame.time.delay( WAIT_BETWEEN_TURNS * 1000)  # wait between turns
+        # draw_text_middle("You   Crashed\nYour  Score   " + str(score), 40, (255, 255, 255), window)
+        results_menu.add.label(
+            "You Crashed",
+            font_size=60,
+            font_name='arcade.ttf',
+            font_color=(255, 255, 255)
+        )
+
+    results_menu.add.label(
+        "Your Score " + str(score),
+        font_size=60,
+        font_name='arcade.ttf',
+        font_color=(255, 255, 255),
+    )
+
+    # vertical space
+    results_menu.add.vertical_margin(50)
+
+    results_menu.add.button(
+        'Return to Main Menu',
+        # exit menu
+        results_menu.disable,
+        align=pygame_menu.locals.ALIGN_CENTER,
+        font_size=32
+    )
+
+    results_menu.mainloop(win)
+
+    reset()
     #pygame.quit()
 
 
-def update_all_scores( score, studentNo ):
+def update_all_scores( score, playerID ):
     with open( 'allscores.csv', 'a') as allscoresfile:
-        allscoresfile.write(str(studentNo) + "," + str(score) + "\n")
+        allscoresfile.write(str(playerID) + "," + str(score) + "\n")
     allscoresfile.close()
 
 def main_menu(window, playerID):
@@ -572,25 +611,29 @@ def main_menu(window, playerID):
             if event.type == pygame.QUIT:
                 run = False
             elif event.type == pygame.KEYDOWN:
-                main(window, start_time)
+                main(window, start_time, playerID)
             #Added to set main window after a play
                 pygame.display.update()
 
     pygame.quit()
     #sys.exit()
 
+# SM custom theme for menu
+comssa_theme = pygame_menu.themes.THEME_DARK.copy()
+# background color #4459a5
+comssa_theme.background_color = (68, 89, 165)
+# no default title
+comssa_theme.title = False
+# selection colour for input with 30% transparency for color #f5831f 
+comssa_theme.cursor_selection_color = (245, 131, 31, 80)
+# cursor color #f5831f
+comssa_theme.cursor_color = (245, 131, 31)
+
 # SM add reset function to restart the game
 def reset():
     # Initialize pygame
     pygame.init()
-
-    # SM custom theme
-    comssa_theme = pygame_menu.themes.THEME_DARK.copy()
-    # background color #4459a5
-    comssa_theme.background_color = (68, 89, 165)
-    # no default title
-    comssa_theme.title = False
-
+    
     # SM added settings menu
     menu = pygame_menu.Menu(
         height=s_height,
@@ -609,24 +652,27 @@ def reset():
     menu.add.image(logo)
 
     menu.add.label(
-        'ComSSA Tetris',
+        'ComSSA   Tetris',
         align=pygame_menu.locals.ALIGN_CENTER,
-        font_size=40,
+        font_size=50,
         # color of white
-        font_color=(255, 255, 255)
+        font_color=(255, 255, 255),
+        font_name='arcade.ttf'
     )
 
     menu.add.text_input(
         'Enter your Student/Staff ID: ',
         default='12345678',
-        textinput_id='player_id'
+        textinput_id='player_id',
+        font_size=32,
     )
 
     menu.add.button(
-        'Play',
+        'PLAY',
         # exit menu
         menu.disable,
-        align=pygame_menu.locals.ALIGN_CENTER
+        align=pygame_menu.locals.ALIGN_CENTER,
+        font_size=32
     )
 
     menu.mainloop(win)
