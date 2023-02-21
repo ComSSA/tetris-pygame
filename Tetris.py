@@ -1,5 +1,6 @@
 import random
 import pygame
+import csv
 
 """
 10 x 20 grid
@@ -30,13 +31,14 @@ block_size = 30  # size of block
 top_left_x = (s_width - play_width) // 2
 top_left_y = s_height - play_height - 50
 
+allscoresfile = 'allscores.csv'
 filepath = 'highscore.txt'
 fontpath = 'arcade.ttf'
 fontpath_mario = 'mario.ttf'
 logopath = 'ComSSALogo.png'
 #Sets a time for the game to end automatically
 MAX_TIME = 60
-WAIT_BETWEEN_TURNS = 10
+WAIT_BETWEEN_TURNS = 2
 IMAGE_SIZE = (150, 180)
 IMAGE_POSITION = ( 300, 100 )
 TETRIS_TITLE_POS = ( 50, 30 )
@@ -380,23 +382,31 @@ def draw_window(surface, grid, score=0, last_score=0):
 
 
 # update the score txt file with high score
-def update_score(new_score):
-    score = get_max_score()
+#NW Changed to track top 3 scores in order with student number
+def update_score(new_score, studentNo):
 
-    with open(filepath, 'w') as file:
-        if new_score > score:
-            file.write(str(new_score))
-        else:
-            file.write(str(score))
+    scores = get_max_scores()
+    i = 2
+    while( ( new_score > int(scores[i][1]) ) and ( i >= 0 ) ) :
+        i = i - 1
+
+    scores.insert( (i+1), [studentNo, new_score])
+    #Remove lowest score, only save 3
+    scores.pop()
+
+    with open( filepath, 'w', newline='') as file:
+        csv_writer = csv.writer(file)
+        for line in scores:
+            csv_writer.writerow(line)
 
 
+
+#NW Changed to read new file format with top 3 scores
 # get the high score from the file
-def get_max_score():
-    with open(filepath, 'r') as file:
-        lines = file.readlines()        # reads all the lines and puts in a list
-        score = int(lines[0].strip())   # remove \n
-
-    return score
+def get_max_scores():
+    with open( filepath, "r") as file:
+        scores = list( csv.reader(file, delimiter=",") )
+    return scores
 
 
 def main(window):
@@ -412,7 +422,11 @@ def main(window):
     fall_speed = 0.35
     level_time = 0
     score = 0
-    last_score = get_max_score()
+    top_scores = get_max_scores()
+#Takes just the top score, can be updated to include all three scores
+    last_score = int(top_scores[0][1])
+#Placeholder for collecting student number
+    studentNo = 12345678
 
     while run:
         # need to constantly make new grid as locked positions always change
@@ -493,7 +507,8 @@ def main(window):
             next_piece = get_shape()
             change_piece = False
             score += clear_rows(grid, locked_positions) * 10    # increment score by 10 for every row cleared
-            update_score(score)
+        #NW removed as was doing a file read every score update, too much potential for errors
+            #update_score(score, studentNo)
 
             if last_score < score:
                 last_score = score
@@ -505,6 +520,8 @@ def main(window):
 #NW Added condition if max time reached to also end game
         if ( check_lost(locked_positions) ) or ( pygame.time.get_ticks()/1000 >= MAX_TIME ):
             run = False
+            update_all_scores( studentNo, score)
+            update_score(score, studentNo)
 
 #NW Added condition to show whether time expired or lost
     if( pygame.time.get_ticks()/1000 >= MAX_TIME):
@@ -514,6 +531,14 @@ def main(window):
     pygame.display.update()
     pygame.time.delay( WAIT_BETWEEN_TURNS * 1000)  # wait between turns
     #pygame.quit()
+
+
+
+def update_all_scores( studentNo, score ):
+    with open( 'allscores.csv', 'a') as allscoresfile:
+        allscoresfile.write(str(studentNo) + "," + str(score) + "\n")
+    allscoresfile.close()
+
 
 
 def main_menu(window):
