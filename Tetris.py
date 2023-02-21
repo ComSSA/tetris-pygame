@@ -35,6 +35,7 @@ top_left_x = (s_width - play_width) // 2
 top_left_y = s_height - play_height - 50
 
 allscoresfile = 'allscores.csv'
+discordfile = 'discord.csv'
 filepath = 'highscore.txt'
 fontpath = 'arcade.ttf'
 fontpath_mario = 'mario.ttf'
@@ -440,8 +441,7 @@ def main(window, start_time, playerID):
     next_piece = get_shape()
     clock = pygame.time.Clock()
     fall_time = 0
-    # fall_speed = 0.35
-    fall_speed = 0.5
+    fall_speed = 0.35
     level_time = 0
     score = 0
     top_scores = get_max_scores()
@@ -459,10 +459,10 @@ def main(window, start_time, playerID):
 
         clock.tick()  # updates clock
 
-        if level_time/1000 > 5:    # make the difficulty harder every 10 seconds
+        if level_time/1000 > 5:    # make the difficulty harder every 5 seconds
             level_time = 0
-            if fall_speed > 0.15:   # until fall speed is 0.15
-                fall_speed -= 0.005
+            if fall_speed > 0.10:   # until fall speed is 0.15
+                fall_speed -= 0.025
 
         if fall_time / 1000 > fall_speed:
             fall_time = 0
@@ -526,7 +526,7 @@ def main(window, start_time, playerID):
             current_piece = next_piece
             next_piece = get_shape()
             change_piece = False
-            score += clear_rows(grid, locked_positions) * 10    # increment score by 10 for every row cleared
+            score += clear_rows(grid, locked_positions)    # increment score by 1 for every row cleared
         #NW removed as was doing a file read every score update, too much potential for errors
             #update_score(score, playerID)
             top_scores = update_max_scores( score, playerID, top_scores)
@@ -540,6 +540,7 @@ def main(window, start_time, playerID):
 
         #NW Added condition if max time reached to also end game
         if ( check_lost(locked_positions) ) or ( seconds_remaining <= 0 ):
+            print("Game Over with " + str(seconds_remaining) + " seconds remaining")
             run = False
             update_all_scores( score, playerID )
             update_score_file( score, playerID )
@@ -551,6 +552,21 @@ def main(window, start_time, playerID):
         title='Settings',
         theme=comssa_theme,
         width=s_width
+    )
+
+    logo = pygame_menu.baseimage.BaseImage(
+        image_path='ComSSALogo.png',
+        drawing_mode=pygame_menu.baseimage.IMAGE_MODE_FILL
+    )
+    results_menu.add.image(logo)
+
+    results_menu.add.label(
+        'ComSSA   Tetris',
+        align=pygame_menu.locals.ALIGN_CENTER,
+        font_size=50,
+        # color of white
+        font_color=(255, 255, 255),
+        font_name='arcade.ttf'
     )
 
     #NW Added condition to show whether time expired or lost
@@ -612,8 +628,6 @@ def main_menu(window, playerID):
                 run = False
             elif event.type == pygame.KEYDOWN:
                 main(window, start_time, playerID)
-            #Added to set main window after a play
-                pygame.display.update()
 
     pygame.quit()
     #sys.exit()
@@ -664,7 +678,14 @@ def reset():
         'Enter your Student/Staff ID: ',
         default='12345678',
         textinput_id='player_id',
-        font_size=32,
+        font_size=32
+    )
+
+    menu.add.text_input(
+        'Enter your Discord ID/Tag: ',
+        default='User#0000',
+        textinput_id='discord_id',
+        font_size=32
     )
 
     menu.add.button(
@@ -680,8 +701,15 @@ def reset():
     # SM get the player ID from the menu
     playerID = menu.get_input_data()['player_id']
 
+    # get the discord ID from the menu
+    discordID = menu.get_input_data()['discord_id']
+
+    # write both to discord file
+    with open( discordfile , 'a') as f:
+        f.write(str(playerID) + "," + str(discordID) + "\n")
+
     # SM after this menu, run the actual game
-    print("Player ID: " + str(playerID))
+    print("Player ID: " + str(playerID) + " Discord ID: " + str(discordID))
     main_menu(win, playerID)
 
 if __name__ == '__main__':
