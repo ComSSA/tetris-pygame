@@ -1,5 +1,6 @@
 import random
 import pygame
+import csv
 
 """
 10 x 20 grid
@@ -30,6 +31,7 @@ block_size = 30  # size of block
 top_left_x = (s_width - play_width) // 2
 top_left_y = s_height - play_height - 50
 
+allscoresfile = 'allscores.csv'
 filepath = 'highscore.txt'
 fontpath = 'arcade.ttf'
 fontpath_mario = 'mario.ttf'
@@ -319,8 +321,10 @@ def draw_next_shape(piece, surface):
     # pygame.display.update()
 
 
+#NW Changed to takes list of top scores
 # draws the content of the window
-def draw_window(surface, grid, score=0, last_score=0):
+def draw_window(surface, grid, top_scores, score=0 ):
+    
     surface.fill((0, 0, 0))  # fill the surface with black
 
     pygame.font.init()  # initialise font
@@ -353,12 +357,21 @@ def draw_window(surface, grid, score=0, last_score=0):
     surface.blit( imp, (50, 50) )
 
     # last score
-    label_hi = font.render('HIGHSCORE   ' + str(last_score), 1, (255, 255, 255))
+    
+#NW Can change here to include all top three player if needed. 
+    last_score = top_scores[0][1]
+    label_hi = font.render('TOP  SCORE   ' + str(last_score), 1, (255, 255, 255))
+#NW Changed extra unnecessary math
+    start_x_hi = top_left_x - 220
+    start_y_hi = top_left_y + 400
+    surface.blit(label_hi, (start_x_hi, start_y_hi))
 
-    start_x_hi = top_left_x - 240
-    start_y_hi = top_left_y + 200
-
-    surface.blit(label_hi, (start_x_hi + 20, start_y_hi + 200))
+#NW Added student ID of top player.
+    top_id = top_scores[0][0]
+    label_id = font.render('TOP  PLAYER ', 1, (255, 255, 255))
+    y_id = start_y_hi - 100
+    surface.blit(label_id, (start_x_hi, y_id))
+    surface.blit( font.render(str(top_id), 1, (255,255,255) ), (start_x_hi, y_id+30))
 
     # draw content of the grid
     for i in range(row):
@@ -380,23 +393,40 @@ def draw_window(surface, grid, score=0, last_score=0):
 
 
 # update the score txt file with high score
-def update_score(new_score):
-    score = get_max_score()
+#NW Changed to track top 3 scores in order with student number
+def update_score_file(new_score, studentNo ):
 
-    with open(filepath, 'w') as file:
-        if new_score > score:
-            file.write(str(new_score))
-        else:
-            file.write(str(score))
+    scores = get_max_scores()
+    scores = update_max_scores( new_score, studentNo, scores)
+
+    with open( filepath, 'w', newline='') as file:
+        csv_writer = csv.writer(file)
+        for line in scores:
+            csv_writer.writerow(line)
 
 
+#Updates the list of 3 scores if new score is higher
+def update_max_scores( new_score, studentNo, scores):
+
+    i = 2
+    while( ( new_score > int(scores[i][1]) ) and ( i >= 0 ) ) :
+        i = i - 1
+
+    scores.insert( (i+1), [studentNo, new_score])
+    #Remove lowest score, only save 3
+    scores.pop()
+
+    return scores
+
+
+
+
+#NW Changed to read new file format with top 3 scores
 # get the high score from the file
-def get_max_score():
-    with open(filepath, 'r') as file:
-        lines = file.readlines()        # reads all the lines and puts in a list
-        score = int(lines[0].strip())   # remove \n
-
-    return score
+def get_max_scores():
+    with open( filepath, "r") as file:
+        scores = list( csv.reader(file, delimiter=",") )
+    return scores
 
 
 def main(window):
@@ -412,7 +442,11 @@ def main(window):
     fall_speed = 0.35
     level_time = 0
     score = 0
-    last_score = get_max_score()
+    top_scores = get_max_scores()
+#Takes just the top score, can be updated to include all three scores
+    last_score = int(top_scores[0][1])
+#Placeholder for collecting student number
+    studentNo = 12345678
 
     while run:
         # need to constantly make new grid as locked positions always change
@@ -493,27 +527,36 @@ def main(window):
             next_piece = get_shape()
             change_piece = False
             score += clear_rows(grid, locked_positions) * 10    # increment score by 10 for every row cleared
-            update_score(score)
+        #NW removed as was doing a file read every score update, too much potential for errors
+            #update_score(score, studentNo)
+            top_scores = update_max_scores( score, studentNo, top_scores)
 
-            if last_score < score:
-                last_score = score
-
-        draw_window(window, grid, score, last_score)
+        draw_window(window, grid, top_scores, score)
         draw_next_shape(next_piece, window)
         pygame.display.update()
 
 #NW Added condition if max time reached to also end game
         if ( check_lost(locked_positions) ) or ( pygame.time.get_ticks()/1000 >= MAX_TIME ):
             run = False
+            update_all_scores( score, studentNo )
+            update_score_file(score, studentNo)
 
 #NW Added condition to show whether time expired or lost
     if( pygame.time.get_ticks()/1000 >= MAX_TIME):
         draw_text_middle("Times   Up\nYour  Score   " + str(score), 40, (255, 255, 255), window)
     else:
-        draw_text_middle("You   Lost\nYour  Score   " + str(score), 40, (255, 255, 255), window)
+        draw_text_middle("You   Crashed\nYour  Score   " + str(score), 40, (255, 255, 255), window)
     pygame.display.update()
     pygame.time.delay( WAIT_BETWEEN_TURNS * 1000)  # wait between turns
     #pygame.quit()
+
+
+
+def update_all_scores( score, studentNo ):
+    with open( 'allscores.csv', 'a') as allscoresfile:
+        allscoresfile.write(str(studentNo) + "," + str(score) + "\n")
+    allscoresfile.close()
+
 
 
 def main_menu(window):
