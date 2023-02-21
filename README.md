@@ -16,8 +16,6 @@ Download the source code from the repository and run the file just as any other 
 python3 Tetris.py
 ```
 
-If the project is imported in PyCharm, then the file can be run directly by setting the appropriate configurations.
-
 ## Changes made for ComSSA edition
 - ComSSA logo added to main page and run page
 - Time limit given for fast arcade mode
@@ -26,15 +24,6 @@ If the project is imported in PyCharm, then the file can be run directly by sett
 - Refined alignment calculation
 - Student ID input
 - Menu management
-
-## Screenshots
-
-![1](https://github.com/rajatdiptabiswas/tetris-pygame/blob/master/screenshot-start.png)
-*Startup screen*
-
-![2](https://github.com/rajatdiptabiswas/tetris-pygame/blob/master/screenshot-active.png)
-*Active game screen*
-
 
 ## Prerequisites
 - [Python](https://www.python.org)
